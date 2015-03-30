@@ -66,7 +66,6 @@
       'stringencoding': 'ext/stringencoding',
       'tcp-socket': 'ext/tcp-socket',
       'utf7': 'ext/utf7',
-      'wmsy': 'ext/wmsy',
       'wo-utf7': 'ext/wo-utf7'
       // </gelam-ext>
     },

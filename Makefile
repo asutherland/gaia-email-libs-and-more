@@ -127,10 +127,9 @@ endef
 
 .PHONY: test-deps
 test-deps: node_modules
-	-mkdir -p test-logs
-	-rm logic-inspector/test-logs
-	-ln -s '../test-logs' logic-inspector/test-logs
-	-cd logic-inspector; make; cd ..
+	-mkdir -p logic-inspector/test-logs
+	-ln -s logic-inspector/test-logs
+	-cd logic-inspector; make
 
 # If our package.json has been updated, run npm install
 node_modules: package.json

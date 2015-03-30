@@ -980,7 +980,7 @@ function _runTestFile(runner, testFileName, variant, baseUrl, manifestUrl,
       };
 
       writeFile('.', summary.href,
-                'document.currentScript.resolve(' + JSON.stringify(logResults) + ')')
+                JSON.stringify(logResults))
         .then(() => {
           deferred.resolve(summary);
         });
@@ -1257,8 +1257,7 @@ function DOMLoaded() {
 
         readFile('test-logs', INDEX_FILENAME)
           // Blah, file origins. Remove the JSONP function call before JSON-parsing.
-          .then(contents => JSON.parse(contents.slice(contents.indexOf('(') + 1,
-                                                      contents.lastIndexOf(')'))))
+          .then(contents => JSON.parse(contents))
           .catch(err => [])
           .then((jsonIndex) => {
             // Most recent goes first.
@@ -1268,7 +1267,7 @@ function DOMLoaded() {
               suites: summaries
             });
             return writeFile('test-logs', INDEX_FILENAME,
-                             'document.currentScript.resolve(' + JSON.stringify(jsonIndex) + ')');
+                             JSON.stringify(jsonIndex));
           }).then(() => {
             quitApp();
           });

@@ -102,22 +102,23 @@ class LogicInspector extends React.Component {
   }
 
   fetch(url) {
-    return new Promise((resolve, reject) => {
-      var script = document.createElement('script');
-      script.async = true;
-      script.src = url;
-      script.resolve = (json) => {
-        resolve(json);
-        setTimeout(() => {
-          script.parentNode.removeChild(script);
-        });
-      };
-      script.addEventListener('error', (e) => {
-        console.error(e);
-        reject(e);
+    return new Promise(function(resolve, reject) {
+      var req = new XMLHttpRequest();
+      console.log('want to load', url);
+      req.open('GET', url, true);
+      req.responseType = 'json';
+      req.addEventListener('load', function() {
+        if (req.status == 200 || req.status == 0)
+          resolve(req.response);
+        else
+          reject(req.status);
+      }, false);
+      req.addEventListener('timeout', function() {
+        reject('timeout');
       });
-      document.getElementsByTagName('head')[0].appendChild(script);
-    })
+      req.timeout = 30 * 1000;
+      req.send(null);
+    });
   }
 
   render() {
