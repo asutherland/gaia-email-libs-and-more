@@ -201,7 +201,8 @@ TestfileProtocolHandler.prototype = {
 
   scheme: 'testfile',
   defaultPort: 443,
-  protocolFlags: Ci.nsIProtocolHandler.URI_LOADABLE_BY_ANYONE,
+  protocolFlags: Ci.nsIProtocolHandler.URI_LOADABLE_BY_ANYONE |
+                 Ci.nsIProtocolHandler.URI_SAFE_TO_LOAD_IN_SECURE_CONTEXT,
   allowPort: function() { return true; },
 
   newURI: function Proto_newURI(aSpec, aOriginCharset, aBaseURI) {
@@ -218,19 +219,23 @@ TestfileProtocolHandler.prototype = {
     return new CustomURL(aSpec);
   },
 
-  newChannel: function Proto_newChannel(aURI) {
+  newChannel2: function Proto_newChannel(aURI, aLoadInfo) {
     var relPath;
     if (aURI.QueryInterface(Ci.nsIURL))
       relPath = aURI.filePath;
     else
       relPath = aURI.path;
-    if (DEBUG)
+    if (DEBUG) {
       dump('trying to create channel for: ' + relPath + '\n');
-    var channel = URIChannel(IOService.newFileURI(do_get_file(relPath)).spec,
-                             null, null);
+    }
+    var fileuri = IOService.newFileURI(do_get_file(relPath));
+    var channel = IOService.newChannelFromURIWithLoadInfo(fileuri, aLoadInfo);
+    if (DEBUG) {
+      dump("channel load info: " + aLoadInfo.loadingPrincipal + " flags: " +
+           aLoadInfo.securityFlags.toString(16) + " enforce: " +
+           aLoadInfo.enforceSecurity + "\n");
+    }
     channel.originalURI = aURI;
-
-
 
     // NOTE!  Originally we set the owner to the (deprecated) codebase
     // principal which is now the noapp principal.  Then I changed us to

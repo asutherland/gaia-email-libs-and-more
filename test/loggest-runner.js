@@ -80,13 +80,16 @@ var loggestRouterModule = {
 $router.register(loggestRouterModule);
 
 requirejs.onError = function rjsError(err) {
-  console.warn('relaying error:', err);
+  console.warn('relaying error:', err, 'type:', err.requireType, 'modules:',
+               err.requireModules, 'stack:\n', err.stack);
   loggestRouterModule.sendMessage(
     null, 'error',
     { name: err.name, message: err.message, stack: err.stack });
 };
 
-var worker = new Worker('/test/worker-bootstrap.js');
+var workerUrl = '/test/worker-bootstrap.js';
+console.log('Trying to create worker with URL:', workerUrl);
+var worker = new Worker(workerUrl);
 $router.useWorker(worker);
 
 }); // end define

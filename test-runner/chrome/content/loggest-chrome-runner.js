@@ -88,10 +88,13 @@ var gRunnerWindow, gFakeParent;
 
 var ErrorTrapperHelper = {
   observe: function (aMessage, aTopic, aData) {
-    if (aTopic == "profile-after-change")
+    if (aTopic === "profile-after-change") {
       return;
-    else if (aTopic == "quit-application") {
+    } else if (aTopic === "quit-application") {
       this.unhookConsoleService();
+      return;
+    } else if (aTopic === "csp-on-violate-policy") {
+      console.warn('CSP:', aMessage);
       return;
     }
 
@@ -101,13 +104,16 @@ var ErrorTrapperHelper = {
         if (aMessage.category == "CSS Parser")
           return;
 
+        /*
         if (aMessage.flags & nsIScriptError.warningFlag)
           return;
         if (aMessage.flags & nsIScriptError.strictFlag)
           return;
+        */
 
-         console.error(aMessage.errorMessage + ' [' + aMessage.category + ']',
-                      aMessage.sourceName, aMessage.lineNumber);
+        console[(aMessage.flags&nsIScriptError.warningFlag) ? 'warn' : 'error'](
+          aMessage.errorMessage + ' [' + aMessage.category + ']',
+          aMessage.sourceName, aMessage.lineNumber);
 
         if (gRunnerWindow && gRunnerWindow.wrappedJSObject &&
             gRunnerWindow.wrappedJSObject.ErrorTrapper) {
@@ -152,10 +158,12 @@ var ErrorTrapperHelper = {
     this.observerService = Cc["@mozilla.org/observer-service;1"]
                              .getService(Ci.nsIObserverService);
     this.observerService.addObserver(this, "quit-application", false);
+    this.observerService.addObserver(this, "csp-on-violate-policy", false);
   },
   unhookConsoleService: function () {
     this.consoleService.unregisterListener(this);
     this.observerService.removeObserver(this, "quit-application");
+    this.observerService.removeObserver(this, "csp-on-violate-policy");
     this.consoleService = null;
     this.observerService = null;
   },
@@ -167,8 +175,9 @@ ErrorTrapperHelper.hookConsoleService();
 
 // Disable automatic network detection, so tests work correctly when
 // not connected to a network.
-let (ios = Components.classes["@mozilla.org/network/io-service;1"]
-           .getService(Components.interfaces.nsIIOService2)) {
+{
+  let ios = Components.classes["@mozilla.org/network/io-service;1"]
+              .getService(Components.interfaces.nsIIOService2);
   ios.manageOfflineStatus = false;
   ios.offline = false;
 }
@@ -179,10 +188,9 @@ try {
     let processType = Components.classes["@mozilla.org/xre/runtime;1"].
       getService(Components.interfaces.nsIXULRuntime).processType;
     if (processType == Components.interfaces.nsIXULRuntime.PROCESS_TYPE_DEFAULT) {
-      let (prefs = Components.classes["@mozilla.org/preferences-service;1"]
-                   .getService(Components.interfaces.nsIPrefBranch)) {
-        prefs.setCharPref("network.dns.ipv4OnlyDomains", "localhost");
-      }
+      let prefs = Components.classes["@mozilla.org/preferences-service;1"]
+                   .getService(Components.interfaces.nsIPrefBranch);
+      prefs.setCharPref("network.dns.ipv4OnlyDomains", "localhost");
     }
   }
 }
@@ -320,15 +328,14 @@ function do_get_file(path, allowNonexistent) {
 // Map resource://test/ to current working directory and
 // resource://testing-common/ to the shared test modules directory.
 function register_resource_alias(alias, file) {
-  let (ios = Components.classes["@mozilla.org/network/io-service;1"]
-             .getService(Components.interfaces.nsIIOService)) {
-    let protocolHandler =
-      ios.getProtocolHandler("resource")
-         .QueryInterface(Components.interfaces.nsIResProtocolHandler);
+  let ios = Components.classes["@mozilla.org/network/io-service;1"]
+             .getService(Components.interfaces.nsIIOService);
+  let protocolHandler =
+    ios.getProtocolHandler("resource")
+      .QueryInterface(Components.interfaces.nsIResProtocolHandler);
     let dirURI = ios.newFileURI(file);
     console.harness('adding resources alias:', alias, 'to', dirURI.path);
     protocolHandler.setSubstitution(alias, dirURI);
-  };
 }
 
 register_resource_alias('fakeserver', do_get_file('node_modules/mail-fakeservers/xpcom'));
@@ -458,7 +465,7 @@ function populateTestParams() {
 
   let environ = Cc["@mozilla.org/process/environment;1"]
                   .getService(Ci.nsIEnvironment);
-  for each (let [, {name, envVar, coerce}] in Iterator(ENVIRON_MAPPINGS)) {
+  for (let {name, envVar, coerce} of ENVIRON_MAPPINGS) {
     let argval = args.handleFlagWithParam('test-param-' + name,
                                           caseInsensitive);
     if (argval) {
@@ -751,6 +758,14 @@ function _installTestFileThenRun(runner, testFileName, variant, controlServer) {
   // than deleting the database every time because at the end of the run we
   // will have all the untouched IndexedDB databases around so we can poke at
   // them if we need/want.
+  //
+  // NOTE!  Workers end up asking about the base domain of our protocol.
+  // Although we could avoid this by having our protocol do URI_NORELATIVE, that
+  // could have other side-effects.  The gecko code then ends up doing domain
+  // calculations on the host, assuming the standard domain name mechanism
+  // (which is fairly reasonable.)  But so we tack a fake '.com' onto the end.
+  // This is ridiculous, but works.  (We could nest under a domain we actually
+  // control, but we don't want to actually coalesce around our TLD+1.)
   var baseUrl = 'testfile://' + testFileName + '-' +
                   variant.replace(/:/g, '_') + '/';
 
@@ -770,6 +785,7 @@ function _installTestFileThenRun(runner, testFileName, variant, controlServer) {
       installOrigin: baseUrl,
       origin: baseUrl, // used
       manifestURL: manifestUrl, // used
+      appStatus: 1, // be APP_STATUS_INSTALLED (this is also the default)
       receipts: [],
       categories: []
       // not used by us: 'localInstallPath' ?

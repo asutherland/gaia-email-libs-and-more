@@ -203,7 +203,8 @@ define(function(require) {
         });
       },
 
-      action: () => {
+      // (function must be used because arrow-funcs lack `arguments`)
+      action: function() {
         var stepFn = arguments[arguments.length - 1];
         var name = '';
         for (var i = 0; i < arguments.length - 1; i++) {
@@ -212,7 +213,7 @@ define(function(require) {
         stepFn.stepName = name;
         this.steps.push(stepFn);
         return stepFn;
-      },
+      }.bind(this),
 
       lazyLogger: (name) => {
         return T.actor(name);
