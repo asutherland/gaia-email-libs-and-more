@@ -40,7 +40,8 @@ Cu.import("resource://gre/modules/osfile.jsm");
 // absolutely don't want it.)
 Cu.import('resource://gre/modules/ContactService.jsm');
 //Cu.import('resource://gre/modules/SettingsChangeNotifier.jsm');
-Cu.import('resource://gre/modules/DataStoreChangeNotifier.jsm');
+// XXX mulet has issues with this DataStoreChangeNotifier due to a pref missing?
+//Cu.import('resource://gre/modules/DataStoreChangeNotifier.jsm');
 //Cu.import('resource://gre/modules/AlarmService.jsm');
 Cu.import('resource://gre/modules/ActivitiesService.jsm');
 Cu.import('resource://gre/modules/NotificationDB.jsm');

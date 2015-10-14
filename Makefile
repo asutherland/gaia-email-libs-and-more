@@ -70,9 +70,13 @@ download-b2g: b2g
 gaia-symlink:
 	echo "You need to create a symlink 'gaia-symlink' pointing at the gaia dir"
 
+RUNAPP=mulet
+RUNBIN=firefox
+
 SYS=$(shell uname -s)
-B2GBD := b2g-builddir-symlink
-ifeq ($(wildcard b2g-bindir-symlink),)
+B2GBD := $(RUNAPP)-builddir-symlink
+BINLINK = $(RUNAPP)-bindir-symlink
+ifeq ($(wildcard $(BINLINK)),)
 	B2GBIND := $(B2GBD)/dist/bin
 	RUNB2G := $(B2GBIND)/b2g
 else
@@ -81,11 +85,11 @@ else
 	# readlink on all platforms, since it behaves slightly differently, and only
 	# the OS X platform seems to exhibit this problem.
 	ifeq ($(SYS),Darwin)
-		B2GBIND=`readlink b2g-bindir-symlink`
+		B2GBIND = `readlink $(BINLINK)`
 	else
-		B2GBIND := b2g-bindir-symlink
+		B2GBIND := $(BINLINK)
 	endif
-	RUNB2G := $(B2GBIND)/b2g-bin
+	RUNB2G := $(B2GBIND)/$(RUNBIN)
 endif
 
 # Best effort use RUNMOZ if its available otherwise ignore it.
@@ -191,3 +195,10 @@ b2g: node_modules
 		--branch mozilla-central \
 		./
 	ln -nsf ./b2g b2g-bindir-symlink
+
+mulet: node_modules
+		./node_modules/.bin/mozilla-download \
+			--product mulet \
+			--branch mozilla-central \
+			./
+		ln -nsf ./firefox mulet-bindir-symlink
